@@ -1,846 +1,855 @@
-import { useEffect, useRef, useState } from "react";
 import {
-  ArrowUpRight,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
   ArrowDown,
+  ArrowDownRight,
   ArrowLeft,
   ArrowRight,
-  Plus,
-  Minus,
-  X,
-  Menu,
-  Grid2X2,
-  GalleryHorizontal,
   Check,
+  CircleDot,
   Copy,
-  MoveUpRight,
-  Asterisk,
+  GalleryHorizontal,
+  Grid2X2,
+  Mic,
+  Square,
+  X,
 } from "lucide-react";
-import { projects } from "./projects";
+import BrushTrail from "./BrushTrail";
+import { assets, projects, socials } from "./projects";
 
+const GalleryCanvas = lazy(() => import("./GalleryCanvas"));
 const EMAIL = "jaubashi@gmail.com";
-const services = [
-  {
-    title: "Design with intention",
-    description:
-      "Distinctive identities and thoughtful websites, shaped around your story. From the first conversation to the smallest detail, every choice has a reason.",
-  },
-  {
-    title: "Build with care",
-    description:
-      "Responsive, accessible websites that feel as good as they look. Clean development brings the design to life across devices, with performance and usability built in.",
-  },
-  {
-    title: "Make room for motion",
-    description:
-      "Small interactions and expressive animations that add personality. Movement guides attention, gives feedback, and makes a digital experience feel human.",
-  },
-];
+const pages = ["home", "portfolio", "about", "contacts"];
+const pageFromHash = () => {
+  const route = location.hash.replace(/^#\/?/, "");
+  return pages.includes(route) ? route : "home";
+};
 
-function ProjectArt({ project, large = false }) {
+function CrossFrame({ className = "", children }) {
   return (
-    <div
-      className={`project-art art-${project.style} ${large ? "art-large" : ""}`}
-      aria-hidden="true"
-    >
-      {project.style === "architecture" && (
-        <>
-          <img src={`${import.meta.env.BASE_URL}images/architecture.webp`} alt="" loading="lazy" />
-          <div className="art-topline">
-            <span>STILL HOUSE</span>
-            <span>Architecture & interiors</span>
-          </div>
-          <div className="architecture-title">
-            Room to
-            <br />
-            <em>be.</em>
-          </div>
-          <span className="art-corner">Spaces for a slower life ↗</span>
-        </>
-      )}
-      {project.style === "soma" && (
-        <>
-          <div className="soma-word">soma</div>
-          <div className="soma-sun" />
-          <div className="soma-can">
-            <div className="can-top" />
-            <span className="can-small">A LITTLE SUNSHINE</span>
-            <strong>soma</strong>
-            <span className="can-fruit" />
-            <span className="can-flavor">
-              BLOOD ORANGE
-              <br />
-              NATURALLY BRIGHT
-            </span>
-            <span className="can-bottom">FEEL-GOOD SPARKLING WATER</span>
-          </div>
-          <div className="soma-caption">
-            Sip a little
-            <br />
-            <em>sunshine.</em>
-          </div>
-          <span className="art-corner">Good things come naturally.</span>
-        </>
-      )}
-      {project.style === "form" && (
-        <>
-          <div className="form-top">
-            <span>F / S</span>
-            <span>EXPLORATIONS IN MOTION</span>
-          </div>
-          <div className="sculpture">
-            <div />
-            <div />
-            <div />
-            <div />
-            <div />
-          </div>
-          <div className="form-title">
-            form<span>in a constant state of change</span>
-          </div>
-        </>
-      )}
-      {project.style === "offhours" && (
-        <>
-          <div className="off-top">A JOURNAL FOR THE IN-BETWEEN</div>
-          <div className="off-title">
-            Off
-            <br />
-            <em>Hours.</em>
-          </div>
-          <div className="off-orb" />
-          <span className="art-corner">Take your time. Make it yours.</span>
-        </>
-      )}
-      {project.style === "common" && (
-        <>
-          <div className="common-mark">
-            <div />
-            <div />
-            <div />
-            <div />
-          </div>
-          <div className="common-title">
-            common
-            <br />
-            ground<span>A space for good ideas.</span>
-          </div>
-          <span className="common-corner">COME AS YOU ARE ↗</span>
-        </>
-      )}
+    <div className={`cross-frame ${className}`}>
+      <i />
+      <i />
+      <i />
+      <i />
+      {children}
     </div>
   );
 }
 
 function ProjectDialog({ project, onClose, onNext }) {
-  const dialogRef = useRef(null);
+  const ref = useRef(null);
   useEffect(() => {
-    const dialog = dialogRef.current;
-    dialog.showModal();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    ref.current.showModal();
   }, []);
   useEffect(() => {
-    dialogRef.current.scrollTop = 0;
-  }, [project.id]);
+    ref.current.scrollTop = 0;
+  }, [project]);
   return (
     <dialog
-      className="project-dialog"
-      ref={dialogRef}
+      ref={ref}
+      className="project-detail"
       onCancel={onClose}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
       aria-labelledby="project-title"
     >
-      <div className="dialog-shell">
-        <div className="dialog-toolbar">
-          <span>SELECTED WORK / CONCEPT PROJECT</span>
-          <button
-            className="close-button"
-            aria-label="Close project"
-            onClick={onClose}
-          >
-            <X size={21} />
+      <div className="detail-inner">
+        <header className="detail-header">
+          <span>{project.category}</span>
+          <button type="button" aria-label="Close project" onClick={onClose}>
+            <X size={24} />
           </button>
-        </div>
-        <div className="dialog-heading">
-          <h2 id="project-title">{project.name}</h2>
-          <p>
-            {project.discipline}
-            <br />
-            {project.year}
-          </p>
-        </div>
-        <ProjectArt project={project} large />
-        <div className="project-story">
-          <div>
-            <span className="eyebrow">THE IDEA</span>
-            <h3>{project.tagline}</h3>
-            <p>{project.description}</p>
-          </div>
-          <div className="project-deliverables">
-            <span className="eyebrow">WHAT WENT INTO IT</span>
-            {project.deliverables.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        </div>
-        <div className="project-process">
-          <div>
-            <h4>The challenge</h4>
-            <p>{project.challenge}</p>
-          </div>
-          <div>
-            <h4>The approach</h4>
-            <p>{project.approach}</p>
-          </div>
-        </div>
-        <button className="next-project" onClick={onNext}>
-          <span>
-            Keep exploring<small>Next project</small>
-          </span>
-          <ArrowRight size={38} />
+        </header>
+        <h2 id="project-title">{project.name}</h2>
+        <p>{project.description}</p>
+        <img src={project.image} alt={project.name} />
+        <button className="detail-next" onClick={onNext}>
+          Next project <ArrowRight size={24} />
         </button>
       </div>
     </dialog>
   );
 }
 
-function Work({ onOpen }) {
+function Portfolio({ onOpen, reducedMotion }) {
   const [filter, setFilter] = useState("All");
   const [view, setView] = useState("carousel");
-  const [current, setCurrent] = useState(0);
-  const touchStart = useRef(null);
-  const filtered = projects.filter(
-    (project) => filter === "All" || project.category === filter,
+  const [position, setPosition] = useState(0);
+  const [webgl, setWebgl] = useState(true);
+  const stageRef = useRef(null);
+  const collection = useMemo(
+    () =>
+      projects.filter(
+        (project) => filter === "All" || project.category === filter,
+      ),
+    [filter],
   );
-  const active = filtered[current];
-  const changeProject = (direction) =>
-    setCurrent(
-      (index) => (index + direction + filtered.length) % filtered.length,
-    );
-  const selectFilter = (category) => {
-    setFilter(category);
-    setCurrent(0);
+  const current =
+    ((Math.round(position) % collection.length) + collection.length) %
+    collection.length;
+  const move = useCallback(
+    (delta) => setPosition((value) => value + delta),
+    [],
+  );
+  useEffect(() => {
+    if (view !== "carousel") return;
+    const stage = stageRef.current;
+    const wheel = (event) => {
+      if (event.ctrlKey) return;
+      event.preventDefault();
+      move(
+        (Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY) * 0.0025,
+      );
+    };
+    stage.addEventListener("wheel", wheel, { passive: false });
+    return () => stage.removeEventListener("wheel", wheel);
+  }, [view, move]);
+  const chooseFilter = (value) => {
+    setFilter(value);
+    setPosition(0);
   };
   return (
     <section
-      id="work"
-      className="work-section section-dark"
-      aria-labelledby="work-title"
+      className={`portfolio-page page-enter layout-${view}`}
+      ref={stageRef}
+      aria-label="Portfolio"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+          event.preventDefault();
+          move(event.key === "ArrowRight" ? 1 : -1);
+        }
+      }}
     >
-      <div className="work-heading section-padding reveal">
-        <div>
-          <span className="eyebrow">
-            <span className="tiny-dot" /> SELECTED WORK
-          </span>
-          <h2 id="work-title">
-            A little curiosity.
-            <br />A lot of <em>possibility.</em>
-          </h2>
-        </div>
-        <p>
-          A selection of digital experiences,
-          <br />
-          brand worlds, and things in motion.
-          <br />
-          <span>Independent concepts, made with care.</span>
-        </p>
-      </div>
-      <div className="work-controls section-padding">
-        <div className="filters" aria-label="Filter projects">
-          {["All", "Websites", "Motion"].map((category) => (
+      <div className="gallery-controls">
+        <div className="gallery-filters" aria-label="Filter projects">
+          {["All", "Web", "Motion"].map((value) => (
             <button
-              key={category}
-              onClick={() => selectFilter(category)}
-              aria-pressed={filter === category}
+              key={value}
+              aria-pressed={filter === value}
+              onClick={() => chooseFilter(value)}
             >
-              {category}
-              {category === "All" && (
-                <sup>{projects.length.toString().padStart(2, "0")}</sup>
-              )}
+              {value}
             </button>
           ))}
         </div>
-        <div className="view-switch" aria-label="Project layout">
+        <div className="gallery-views">
           <button
+            onClick={() => setView("carousel")}
             aria-label="Carousel view"
             aria-pressed={view === "carousel"}
-            onClick={() => setView("carousel")}
           >
-            <GalleryHorizontal size={18} />
+            <GalleryHorizontal size={21} strokeWidth={1} />
           </button>
           <button
+            onClick={() => setView("grid")}
             aria-label="Grid view"
             aria-pressed={view === "grid"}
-            onClick={() => setView("grid")}
           >
-            <Grid2X2 size={18} />
+            <Grid2X2 size={21} strokeWidth={1} />
           </button>
         </div>
       </div>
-      {view === "carousel" ? (
+      {view === "carousel" && webgl ? (
         <>
-          <div
-            className="project-carousel"
-            tabIndex={0}
-            role="region"
-            aria-label="Project carousel. Use left and right arrow keys to browse."
-            onKeyDown={(event) => {
-              if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-                event.preventDefault();
-                changeProject(event.key === "ArrowRight" ? 1 : -1);
-              }
-            }}
-            onTouchStart={(event) => {
-              touchStart.current = event.touches[0].clientX;
-            }}
-            onTouchEnd={(event) => {
-              if (touchStart.current === null) return;
-              const distance =
-                touchStart.current - event.changedTouches[0].clientX;
-              if (Math.abs(distance) > 45) changeProject(distance > 0 ? 1 : -1);
-              touchStart.current = null;
-            }}
+          <Suspense
+            fallback={
+              <div className="gallery-loading" aria-label="Loading portfolio" />
+            }
           >
-            <div className="carousel-stage">
-              {filtered.map((project, index) => {
-                let offset = index - current;
-                if (offset > filtered.length / 2) offset -= filtered.length;
-                if (offset < -filtered.length / 2) offset += filtered.length;
-                return (
-                  <button
-                    key={project.id}
-                    className={`carousel-card ${offset === 0 ? "is-current" : ""}`}
-                    style={{
-                      "--offset": offset,
-                      "--angle": `${offset * -13}deg`,
-                      "--scale": offset === 0 ? 1 : 0.87,
-                    }}
-                    aria-label={`${offset === 0 ? "View" : "Select"} ${project.name}`}
-                    tabIndex={offset === 0 ? 0 : -1}
-                    onClick={() =>
-                      offset === 0 ? onOpen(project) : setCurrent(index)
-                    }
-                  >
-                    <ProjectArt project={project} />
-                    <span className="card-open">
-                      <ArrowUpRight size={22} />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <GalleryCanvas
+              projects={collection}
+              position={position}
+              onMove={move}
+              onSelect={onOpen}
+              onReady={setWebgl}
+              reducedMotion={reducedMotion}
+            />
+          </Suspense>
+          <CrossFrame className="selection-frame" />
+          <button
+            className="gallery-caption"
+            onClick={() => onOpen(collection[current])}
+            aria-live="polite"
+          >
+            {collection[current].name}
+            <span>{collection[current].description}</span>
+          </button>
+          <div className="gallery-keyboard">
+            <button onClick={() => move(-1)} aria-label="Previous project">
+              <ArrowLeft size={20} />
+            </button>
+            <button onClick={() => move(1)} aria-label="Next project">
+              <ArrowRight size={20} />
+            </button>
           </div>
-          <div className="carousel-bottom section-padding">
-            <div className="project-caption" aria-live="polite">
-              <span>
-                {active.name}
-                <ArrowUpRight size={17} />
-              </span>
-              <p>{active.discipline}</p>
-            </div>
-            <div className="carousel-navigation">
-              <span>
-                {String(current + 1).padStart(2, "0")}{" "}
-                <span>/ {String(filtered.length).padStart(2, "0")}</span>
-              </span>
-              <button
-                className="round-button"
-                aria-label="Previous project"
-                onClick={() => changeProject(-1)}
-              >
-                <ArrowLeft size={19} />
-              </button>
-              <button
-                className="round-button"
-                aria-label="Next project"
-                onClick={() => changeProject(1)}
-              >
-                <ArrowRight size={19} />
-              </button>
-            </div>
+          <div className="sr-only">
+            <p>
+              Scroll, drag, or use the previous and next buttons to explore the
+              portfolio.
+            </p>
           </div>
         </>
       ) : (
-        <div className="project-grid section-padding">
-          {filtered.map((project) => (
+        <div className="portfolio-grid">
+          {collection.map((project) => (
             <button
-              className="grid-card"
+              className="project-tile"
               key={project.id}
               onClick={() => onOpen(project)}
             >
-              <div className="grid-art">
-                <ProjectArt project={project} />
-                <span className="card-open">
-                  <ArrowUpRight size={22} />
-                </span>
+              <div className="tile-image">
+                <img src={project.image} alt="" loading="lazy" />
               </div>
-              <div className="grid-caption">
-                <span>{project.name}</span>
+              <div className="tile-caption">
                 <span>
-                  {project.category} <ArrowUpRight size={16} />
+                  {project.name}
+                  <small>{project.description}</small>
                 </span>
+                <ArrowDownRight size={17} />
               </div>
             </button>
           ))}
         </div>
       )}
-      <div className="work-footnote section-padding">
-        <span>Thoughtfully designed. Carefully developed.</span>
-        <Asterisk size={21} strokeWidth={1.2} />
-        <span>Always a work in progress.</span>
-      </div>
     </section>
   );
 }
 
-function About() {
-  const [openService, setOpenService] = useState(0);
+function About({ onContact }) {
   return (
-    <section id="about" className="about-section" aria-labelledby="about-title">
-      <div className="about-image">
-        <img
-          src={`${import.meta.env.BASE_URL}images/studio.webp`}
-          alt="A warm creative studio with a designer seated in an orange lounge chair"
-          loading="lazy"
-        />
-        <span className="image-caption">
-          A little space to think differently.
-        </span>
-        <div className="about-image-label">
-          Curious by nature.
-          <br />
-          <em>Creative by choice.</em>
-        </div>
+    <section className="about-page page-enter" aria-labelledby="about-title">
+      <div className="about-paper" />
+      <div className="about-color">
+        <img className="about-portrait" src={assets.portrait} alt="Portrait" />
       </div>
-      <div className="about-copy section-padding">
-        <span className="eyebrow">
-          <span className="tiny-dot" /> THE PERSON BEHIND THE PIXELS
-        </span>
-        <h2 id="about-title">
-          Good design
-          <br />
-          starts with
-          <br />
-          <em>a conversation.</em>
-        </h2>
-        <div className="about-intro">
-          <p>
-            Hey, I’m Endy. An independent designer and creative developer
-            turning ideas into digital experiences with character.
-          </p>
-          <p>
-            I bring strategy, design, and development together to make things
-            that feel considered, work beautifully, and leave a lasting
-            impression.
+      <img
+        className="about-dots"
+        src={assets.portraitDots}
+        alt=""
+        aria-hidden="true"
+      />
+      <div className="about-scroll">
+        <div className="about-opening">
+          <h1 id="about-title">
+            Making the
+            <br />
+            complex clear
+          </h1>
+          <p className="about-lead">
+            I’m an interface and motion designer. Before I draw anything, I get
+            to know the client’s business, their competitors and audience, so I
+            can then tell people in plain words what they sell and why they need
+            it. On those words I build a website, an app or an ad, where the
+            visuals back up the text and make the main thing stand out.
           </p>
         </div>
-        <div className="services">
-          {services.map((service, index) => (
-            <div
-              className={`service ${openService === index ? "is-open" : ""}`}
-              key={service.title}
-            >
-              <button
-                aria-expanded={openService === index}
-                aria-controls={`service-${index}`}
-                onClick={() =>
-                  setOpenService(openService === index ? null : index)
-                }
-              >
-                {service.title}
-                {openService === index ? (
-                  <Minus size={20} />
-                ) : (
-                  <Plus size={20} />
-                )}
-              </button>
-              <div
-                id={`service-${index}`}
-                className="service-description"
-                hidden={openService !== index}
-              >
-                <p>{service.description}</p>
-              </div>
-            </div>
-          ))}
+        <div className="about-body">
+          <section className="about-industries">
+            <p>Worked with businesses across industries</p>
+            <h2>
+              {[
+                "Medicine",
+                "Beauty",
+                "Furniture fittings",
+                "Heating & plumbing",
+                "Real estate",
+                "Marketing",
+                "Military",
+                "Consulting",
+                "Automotive",
+                "Logistics",
+                "Law",
+                "Optics",
+                "Construction",
+                "Fashion",
+                "Food & agro",
+                "Building materials",
+                "Aviation",
+                "Video production",
+                "Education",
+              ].map((item, index, items) => (
+                <span key={item}>
+                  {item}
+                  {index < items.length - 1 && <b> / </b>}
+                </span>
+              ))}
+            </h2>
+          </section>
+          <section className="about-principle">
+            <p className="about-values-label">What matters to me</p>
+            <span>01</span>
+            <h2>Tangible results</h2>
+            <p>
+              I want design to give the client a tangible result, be it more
+              enquiries or a product people finally understand, and to be
+              beautiful too. Clients come to me as to an expert, so I propose
+              the solutions myself and can explain why it’s done this way.
+            </p>
+          </section>
+          <section className="about-principle">
+            <span>02</span>
+            <h2>Proud to show</h2>
+            <p>
+              I always bet on quality over quantity. I have to like the work
+              myself, so I’m not ashamed to show it in my portfolio.
+            </p>
+          </section>
+          <section className="about-principle">
+            <span>03</span>
+            <h2>Trying new things</h2>
+            <p>
+              I like trying new tools when they make the work more interesting
+              and the result better. I’m not afraid of risk, experience comes
+              faster with it.
+            </p>
+          </section>
+          <section className="about-cta">
+            <h2>
+              Something complex?
+              <br />
+              Let’s make it clear.
+            </h2>
+            <button onClick={onContact}>
+              Get in touch <ArrowRight size={18} />
+            </button>
+          </section>
         </div>
-        <a className="text-link" href="#contact">
-          Let’s make something feel right <ArrowUpRight size={19} />
-        </a>
       </div>
     </section>
   );
 }
 
-function Contact() {
-  const [kind, setKind] = useState("A website");
+function Contact({ onPrivacy }) {
+  const [time, setTime] = useState("");
+  const [recording, setRecording] = useState(null);
+  const [requestingMedia, setRequestingMedia] = useState(false);
+  const [recorded, setRecorded] = useState(null);
+  const [mediaError, setMediaError] = useState("");
   const [brief, setBrief] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [socialNote, setSocialNote] = useState("");
+  const recorderRef = useRef(null);
+  const mediaRequestRef = useRef(false);
+  const streamRef = useRef(null);
+  const recordedRef = useRef(null);
+  const cancelledRef = useRef(false);
+  const previewRef = useRef(null);
+  useEffect(() => {
+    cancelledRef.current = false;
+    const update = () =>
+      setTime(
+        new Date().toLocaleTimeString("en-US", {
+          timeZone: "Europe/Rome",
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      );
+    update();
+    const interval = setInterval(update, 1000);
+    return () => {
+      clearInterval(interval);
+      cancelledRef.current = true;
+      if (recorderRef.current?.state === "recording")
+        recorderRef.current.stop();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (recordedRef.current) URL.revokeObjectURL(recordedRef.current.url);
+    };
+  }, []);
+  const stopRecording = () => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    setRecording(null);
+  };
+  const startRecording = async (type) => {
+    if (mediaRequestRef.current || recording) return;
+    setMediaError("");
+    setBrief(null);
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setMediaError(
+        "Recording is unavailable in this browser. You can write your message below.",
+      );
+      return;
+    }
+    mediaRequestRef.current = true;
+    setRequestingMedia(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === "video",
+      });
+      if (cancelledRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      if (recordedRef.current) URL.revokeObjectURL(recordedRef.current.url);
+      setRecorded(null);
+      recordedRef.current = null;
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+      const chunks = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (!cancelledRef.current) {
+          setRecording(null);
+          setMediaError(
+            "Recording stopped unexpectedly. You can record again or write your message.",
+          );
+        }
+      };
+      recorder.onstop = () => {
+        if (cancelledRef.current) return;
+        const blob = new Blob(chunks, { type: recorder.mimeType });
+        const extension = recorder.mimeType.includes("mp4") ? "mp4" : "webm";
+        const media = {
+          blob,
+          url: URL.createObjectURL(blob),
+          type,
+          filename: `project-${type}.${extension}`,
+        };
+        recordedRef.current = media;
+        setRecorded(media);
+        setRecording(null);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorder.start();
+      setRecording(type);
+      if (type === "video")
+        requestAnimationFrame(() => {
+          if (previewRef.current) previewRef.current.srcObject = stream;
+        });
+    } catch (error) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (cancelledRef.current) return;
+      setMediaError(
+        error.name === "NotAllowedError"
+          ? "Allow microphone or camera access in your browser to record, or write your message below."
+          : "Recording could not start. Please try again or write your message below.",
+      );
+    } finally {
+      mediaRequestRef.current = false;
+      if (!cancelledRef.current) setRequestingMedia(false);
+    }
+  };
+  const removeRecording = () => {
+    if (recordedRef.current) URL.revokeObjectURL(recordedRef.current.url);
+    recordedRef.current = null;
+    setRecorded(null);
+    setBrief(null);
+  };
   const submit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const message = `Hi Endy,\n\n${data.get("message")}\n\nProject: ${kind}\nBudget: ${data.get("budget") || "Let’s discuss"}\n\nFrom ${data.get("name")}\n${data.get("email")}`;
+    const message = String(data.get("message") || "").trim();
+    if (!message && !recorded) {
+      setMediaError("Write a message or record your idea before continuing.");
+      return;
+    }
+    setMediaError("");
+    const text = `Hi Endy,\n\n${message || "I recorded a message about my project."}${recorded ? `\n\nRecording to attach: ${recorded.filename}` : ""}\n\n${data.get("name")}\nReply to: ${data.get("reply")}`;
     setBrief({
-      name: data.get("name"),
-      body: message,
-      subject: `${kind} — inquiry from ${data.get("name")}`,
+      subject: `Project inquiry from ${data.get("name")}`,
+      body: text,
     });
     setCopied(false);
   };
-  const copyBrief = async () => {
+  const copy = async () => {
     try {
       await navigator.clipboard.writeText(brief.body);
       setCopied(true);
     } catch {
-      const file = new Blob([brief.body], { type: "text/plain" });
-      const url = URL.createObjectURL(file);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "project-inquiry.txt";
-      anchor.click();
-      URL.revokeObjectURL(url);
+      setMediaError(
+        "Copying is unavailable. Open the email draft to send your inquiry.",
+      );
     }
   };
   return (
-    <section
-      id="contact"
-      className="contact-section section-padding"
-      aria-labelledby="contact-title"
-    >
-      <div className="contact-top">
-        <span className="eyebrow">
-          <span className="tiny-dot" /> SOMETHING IN MIND?
-        </span>
-        <span className="contact-availability">
-          <span /> OPEN FOR COLLABORATIONS
-        </span>
-      </div>
-      <h2 id="contact-title" className="reveal">
-        Let’s make
-        <br />
-        <em>something matter.</em>
-        <MoveUpRight className="contact-title-arrow" strokeWidth={0.8} />
-      </h2>
-      <div className="contact-content">
-        <div className="contact-aside">
-          <p>
-            A new idea, a fresh perspective,
-            <br />
-            or just a friendly hello.
-            <br />
-            I’d love to hear from you.
-          </p>
-          <a href={`mailto:${EMAIL}`} className="email-link">
-            {EMAIL}
-            <ArrowUpRight size={20} />
-          </a>
-          <span className="contact-note">
-            Good conversations are where it all begins.
+    <section className="contacts-page page-enter" aria-label="Contacts">
+      <div className="contacts-content">
+        <div className="contact-meta">
+          <span>Available worldwide</span>
+          <span>
+            <i />
+            {time}
           </span>
         </div>
-        <form onSubmit={submit} className="contact-form">
-          <fieldset>
-            <legend>I’m thinking about…</legend>
-            <div className="project-types">
-              {["A website", "Design & motion", "Something else"].map(
-                (item) => (
-                  <button
-                    type="button"
-                    key={item}
-                    aria-pressed={kind === item}
-                    onClick={() => {
-                      setKind(item);
-                      setBrief(null);
-                    }}
-                  >
-                    {item}
-                    {kind === item && <Check size={13} />}
-                  </button>
-                ),
-              )}
-            </div>
-          </fieldset>
-          <div className="form-row">
+        <CrossFrame className="contact-eyes">
+          <img src={assets.eyes} alt="A stippled portrait detail" />
+        </CrossFrame>
+        <div className="contact-socials">
+          {socials.map((social) =>
+            social.href ? (
+              <a
+                key={social.name}
+                href={social.href}
+                target={social.name === "Email" ? undefined : "_blank"}
+                rel="noreferrer"
+              >
+                {social.name}
+              </a>
+            ) : (
+              <button
+                key={social.name}
+                onClick={() =>
+                  setSocialNote(`For ${social.name}, contact me at ${EMAIL}.`)
+                }
+              >
+                {social.name}
+              </button>
+            ),
+          )}
+        </div>
+        {socialNote && (
+          <p className="social-note" role="status">
+            {socialNote} <a href={`mailto:${EMAIL}`}>Email me</a>
+            <button
+              aria-label="Dismiss social contact message"
+              onClick={() => setSocialNote("")}
+            >
+              <X size={14} />
+            </button>
+          </p>
+        )}
+        <form
+          className="reference-form"
+          onSubmit={submit}
+          onChange={() => setBrief(null)}
+        >
+          <div className="contact-fields">
             <label>
-              Your name
+              <span className="sr-only">Name</span>
               <input
                 name="name"
+                placeholder="Name"
                 autoComplete="name"
-                placeholder="What should I call you?"
                 required
                 maxLength={100}
-                onChange={() => setBrief(null)}
               />
             </label>
-            <label>
-              Email address
+            <label className="reply-field">
+              <span>Reply to</span>
               <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="you@somewhere.com"
+                name="reply"
+                placeholder="name@mail.com or @telegram"
                 required
                 maxLength={254}
-                onChange={() => setBrief(null)}
+                aria-label="Reply to"
               />
             </label>
           </div>
-          <label>
-            A little about your project
+          <CrossFrame className="message-frame">
+            <label htmlFor="project-message" className="sr-only">
+              Tell me about your project
+            </label>
             <textarea
+              id="project-message"
               name="message"
-              placeholder="The idea, the ambition, the what-if…"
-              required
-              minLength={10}
-              maxLength={4000}
-              rows={3}
-              onChange={() => setBrief(null)}
+              rows={5}
+              maxLength={5000}
+              placeholder="Tell me about your project"
+              disabled={Boolean(recording)}
             />
-          </label>
-          <div className="budget-label">
-            <label htmlFor="budget">Have a budget in mind?</label>
-            <select
-              id="budget"
-              name="budget"
-              defaultValue=""
-              onChange={() => setBrief(null)}
-            >
-              <option value="">Let’s figure it out together</option>
-              <option>Under €2,000</option>
-              <option>€2,000 – €5,000</option>
-              <option>€5,000 – €10,000</option>
-              <option>€10,000+</option>
-            </select>
-          </div>
-          {brief ? (
-            <div className="form-success" role="status">
-              <div>
-                <Check size={18} />
-                <span>
-                  Your inquiry is ready.
-                  <small>Open your email app to review and send it.</small>
-                </span>
+            <div className="record-controls">
+              {recording ? (
+                <button
+                  type="button"
+                  className="stop-recording"
+                  onClick={stopRecording}
+                >
+                  <Square size={13} fill="currentColor" />
+                  Stop {recording}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={requestingMedia}
+                    onClick={() => startRecording("voice")}
+                  >
+                    <Mic size={16} strokeWidth={1} />
+                    Voice
+                  </button>
+                  <button
+                    type="button"
+                    disabled={requestingMedia}
+                    onClick={() => startRecording("video")}
+                  >
+                    <CircleDot size={17} strokeWidth={1} />
+                    Video
+                  </button>
+                </>
+              )}
+            </div>
+            {recording === "video" && (
+              <video
+                className="live-preview"
+                ref={previewRef}
+                autoPlay
+                muted
+                playsInline
+              />
+            )}
+            {recording === "voice" && (
+              <div className="voice-recording" role="status">
+                <i />
+                Recording your voice…
               </div>
+            )}
+            {recorded && (
+              <div className="recorded-preview">
+                {recorded.type === "video" ? (
+                  <video controls src={recorded.url} playsInline />
+                ) : (
+                  <audio controls src={recorded.url} />
+                )}
+                <button
+                  type="button"
+                  aria-label="Remove recording"
+                  onClick={removeRecording}
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            )}
+          </CrossFrame>
+          <p className="message-hint">
+            Write it, or tap Voice or Video to say it
+          </p>
+          {mediaError && (
+            <p className="form-error" role="alert">
+              {mediaError}
+            </p>
+          )}
+          {brief ? (
+            <div className="inquiry-ready" role="status">
+              <p>
+                Your inquiry is ready to review in your email app.
+                {recorded && (
+                  <>
+                    {" "}
+                    <a href={recorded.url} download={recorded.filename}>
+                      Download your recording
+                    </a>{" "}
+                    and attach it to the email.
+                  </>
+                )}
+              </p>
               <a
-                className="submit-button"
+                className="contact-submit"
                 href={`mailto:${EMAIL}?subject=${encodeURIComponent(brief.subject)}&body=${encodeURIComponent(brief.body)}`}
               >
                 Open email draft
-                <ArrowUpRight size={19} />
               </a>
-              <button type="button" className="copy-brief" onClick={copyBrief}>
+              <button type="button" className="copy-inquiry" onClick={copy}>
                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? "Copied to clipboard" : "Copy inquiry instead"}
+                {copied ? "Copied" : "Copy inquiry"}
               </button>
             </div>
           ) : (
-            <>
-              <button className="submit-button" type="submit">
-                Start a conversation
-                <ArrowUpRight size={20} />
-              </button>
-              <p className="form-note">
-                You’ll review your inquiry in your email app before sending.
-              </p>
-            </>
+            <button className="contact-submit" disabled={Boolean(recording)}>
+              Get in touch
+            </button>
           )}
+          <p className="contact-privacy">
+            By sending, you agree to the{" "}
+            <button type="button" onClick={onPrivacy}>
+              privacy policy
+            </button>
+            .
+          </p>
         </form>
+        <footer className="contacts-footer">
+          <span>© {new Date().getFullYear()} Endy J</span>
+          <button onClick={onPrivacy}>Privacy & cookies</button>
+        </footer>
       </div>
-      <footer>
-        <a href="#home" className="wordmark">
-          endy j
-          <span aria-hidden="true">
-            <Asterisk size={12} />
-          </span>
-        </a>
-        <span>Made with intention. © {new Date().getFullYear()} Endy J</span>
-        <a href="#home" className="back-top">
-          Back to top
-          <ArrowUpRight size={16} />
-        </a>
-      </footer>
     </section>
   );
 }
 
-export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
-  const [scrolled, setScrolled] = useState(false);
-  const [project, setProject] = useState(null);
-  const heroRef = useRef(null);
+function Privacy({ onClose }) {
+  const ref = useRef(null);
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
-        });
-      },
-      { rootMargin: "-20% 0px -55% 0px" },
-    );
-    document
-      .querySelectorAll("main > section")
-      .forEach((section) => observer.observe(section));
-    const reveals = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("revealed");
-            reveals.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 },
-    );
-    document
-      .querySelectorAll(".reveal")
-      .forEach((element) => reveals.observe(element));
-    return () => {
-      observer.disconnect();
-      reveals.disconnect();
-      window.removeEventListener("scroll", handleScroll);
+    ref.current.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="privacy-dialog"
+      onCancel={onClose}
+      aria-labelledby="privacy-title"
+    >
+      <button
+        className="privacy-close"
+        onClick={onClose}
+        aria-label="Close privacy policy"
+      >
+        <X size={22} />
+      </button>
+      <h2 id="privacy-title">Privacy & cookies</h2>
+      <p>
+        Your contact details and project message are included in the email draft
+        you choose to send to {EMAIL}.
+      </p>
+      <p>
+        Voice and video recordings stay in your browser. You can download a
+        recording and attach it to your email. Closing this page removes the
+        recording from the browser’s memory.
+      </p>
+      <p>This portfolio uses no analytics or advertising cookies.</p>
+    </dialog>
+  );
+}
+
+export default function App() {
+  const [page, setPage] = useState(pageFromHash);
+  const [intro, setIntro] = useState(
+    !sessionStorage.getItem("endy-intro-seen"),
+  );
+  const [project, setProject] = useState(null);
+  const [privacy, setPrivacy] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(
+    matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const route = () => {
+      setPage(pageFromHash());
+      setProject(null);
+      setPrivacy(false);
     };
+    addEventListener("hashchange", route);
+    const media = matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotion = () => setReducedMotion(media.matches);
+    media.addEventListener("change", updateMotion);
+    const timer = setTimeout(
+      () => {
+        setIntro(false);
+        sessionStorage.setItem("endy-intro-seen", "1");
+      },
+      reducedMotion ? 0 : 1800,
+    );
+    return () => {
+      removeEventListener("hashchange", route);
+      media.removeEventListener("change", updateMotion);
+      clearTimeout(timer);
+    };
+  }, [reducedMotion]);
+  const navigate = useCallback((destination) => {
+    location.hash = destination === "home" ? "/" : `/${destination}`;
   }, []);
   useEffect(() => {
-    if (!menuOpen) return;
-    const closeMenu = (event) => {
-      if (event.key === "Escape") setMenuOpen(false);
+    if (page !== "home") return;
+    let total = 0;
+    const wheel = (event) => {
+      if (event.ctrlKey || event.deltaY <= 0) return;
+      total += event.deltaY;
+      if (total > 60) navigate("portfolio");
     };
-    window.addEventListener("keydown", closeMenu);
-    return () => window.removeEventListener("keydown", closeMenu);
-  }, [menuOpen]);
-  const moveHero = (event) => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    heroRef.current?.style.setProperty(
-      "--mouse-x",
-      `${(event.clientX / window.innerWidth - 0.5) * 9}px`,
-    );
-    heroRef.current?.style.setProperty(
-      "--mouse-y",
-      `${(event.clientY / window.innerHeight - 0.5) * 6}px`,
-    );
-  };
-  const lightHeader = ["about", "contact"].includes(activeSection);
+    addEventListener("wheel", wheel, { passive: true });
+    return () => removeEventListener("wheel", wheel);
+  }, [page, navigate]);
+  const paper = page === "about" || page === "contacts";
   return (
-    <>
-      <a className="skip-link" href="#main">
+    <div
+      className={`portfolio-app page-${page} ${intro ? "is-intro" : ""} ${paper ? "is-paper" : ""}`}
+    >
+      <svg
+        width="0"
+        height="0"
+        className="filter-definitions"
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="stipple-alpha" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -0.91 -3.06 -0.31 0 3.5"
+            />
+          </filter>
+        </defs>
+      </svg>
+      <a
+        className="skip-link"
+        href="#main-view"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-view").focus();
+        }}
+      >
         Skip to content
       </a>
-      <header
-        className={`site-header ${scrolled ? "is-scrolled" : ""} ${lightHeader ? "on-light" : ""} ${menuOpen ? "menu-open" : ""}`}
+      <div
+        className={`scene-background ${page === "portfolio" ? "is-blurred" : ""}`}
       >
-        <a
-          href="#home"
-          className="wordmark"
-          aria-label="Endy J home"
-          onClick={() => setMenuOpen(false)}
-        >
-          endy j
-          <span aria-hidden="true">
-            <Asterisk size={12} />
-          </span>
+        <img src={assets.scene} alt="" fetchPriority="high" />
+      </div>
+      <header className="site-header">
+        <a href="#/" className="site-name" aria-label="Endy J home">
+          Endy J
         </a>
-        <div className="header-note">
-          Independent mind.
-          <br />
-          Working everywhere.
-        </div>
-        <nav
-          aria-label="Main navigation"
-          id="main-nav"
-          className={menuOpen ? "is-open" : ""}
-        >
+        <nav aria-label="Main navigation">
           {[
-            ["work", "Work"],
-            ["about", "About"],
-            ["contact", "Let’s talk"],
-          ].map(([id, label]) => (
+            ["portfolio", "Portfolio,"],
+            ["about", "About,"],
+            ["contacts", "Contacts"],
+          ].map(([route, label]) => (
             <a
-              key={id}
-              className={activeSection === id ? "active" : ""}
-              href={`#${id}`}
-              onClick={() => setMenuOpen(false)}
+              key={route}
+              href={`#/${route}`}
+              aria-current={page === route ? "page" : undefined}
             >
               {label}
-              {id === "contact" && <ArrowUpRight size={15} />}
             </a>
           ))}
         </nav>
-        <button
-          className="menu-toggle"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={menuOpen}
-          aria-controls="main-nav"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </button>
       </header>
-      <main id="main">
-        <section
-          className="hero"
-          id="home"
-          ref={heroRef}
-          onMouseMove={moveHero}
-        >
-          <div className="hero-visual">
-            <img
-              src={`${import.meta.env.BASE_URL}images/studio.webp`}
-              alt="Warm sunlight falling through a creative studio"
-              fetchPriority="high"
-            />
-          </div>
-          <div className="hero-shade" />
-          <div className="hero-grain" />
-          <div className="hero-content section-padding">
-            <div className="hero-eyebrow">
-              <span className="tiny-dot" /> WEB DESIGN · DEVELOPMENT · MOTION
+      <main id="main-view" tabIndex={-1}>
+        {page === "home" && (
+          <section className="home-page page-enter" aria-label="Home">
+            <div className="opening-name" aria-hidden="true">
+              Endy J
             </div>
-            <h1>
-              Make it
-              <br />
-              feel <em>something.</em>
-              <span className="title-spark">
-                <Asterisk strokeWidth={1} />
-              </span>
+            <h1 className="home-title">
+              <span>Web</span>
+              <span className="ampersand">&</span>
+              <span>motion</span>
+              <span>Designer</span>
             </h1>
-            <div className="hero-description">
-              <span className="hero-line" />
-              <p>
-                Thoughtful digital experiences.
-                <br />A little unexpected. Entirely you.
-              </p>
-            </div>
-          </div>
-          <div className="hero-bottom section-padding">
-            <a href="#work" className="explore-link">
-              <span className="explore-circle">
-                <ArrowDown size={17} />
-              </span>
-              Step into my world
+            <a className="scroll-prompt" href="#/portfolio">
+              Scroll to watch portfolio
+              <ArrowDown size={18} strokeWidth={1} />
             </a>
-            <div className="hero-bottom-note">
-              A good idea is just the beginning.
-            </div>
-            <a href="#contact" className="availability">
-              <span className="status-dot" /> AVAILABLE FOR SELECT PROJECTS
-              <ArrowUpRight size={15} />
-            </a>
-          </div>
-          <div className="hero-edge-label">DESIGN WITH FEELING</div>
-        </section>
-        <Work onOpen={setProject} />
-        <About />
-        <Contact />
+          </section>
+        )}
+        {page === "portfolio" && (
+          <Portfolio onOpen={setProject} reducedMotion={reducedMotion} />
+        )}
+        {page === "about" && <About onContact={() => navigate("contacts")} />}
+        {page === "contacts" && <Contact onPrivacy={() => setPrivacy(true)} />}
       </main>
+      <BrushTrail disabled={Boolean(project || privacy)} paper={paper} />
+      <aside className="award-ribbon" aria-label="Reference design nominee">
+        <strong>W.</strong>
+        <span>Nominee</span>
+      </aside>
+      <div className="screen-grain" aria-hidden="true" />
+      <div className="screen-vignette" aria-hidden="true" />
       {project && (
         <ProjectDialog
           project={project}
@@ -855,6 +864,7 @@ export default function App() {
           }
         />
       )}
-    </>
+      {privacy && <Privacy onClose={() => setPrivacy(false)} />}
+    </div>
   );
 }
