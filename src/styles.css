@@ -135,9 +135,6 @@ h3 {
   filter: blur(7px) brightness(0.84);
   transform: scale(1.025);
 }
-.is-intro .scene-background {
-  animation: scene-reveal 1.8s both;
-}
 .site-header {
   position: absolute;
   z-index: 80;
@@ -196,19 +193,6 @@ h3 {
   mix-blend-mode: soft-light;
   animation: grain-shift 0.17s steps(2) infinite;
 }
-.is-intro .screen-grain {
-  animation:
-    grain-intro 1.8s forwards,
-    grain-shift 0.12s steps(2) infinite;
-}
-.brush-trail {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 50;
-}
 .page-enter {
   animation: page-in 0.8s both;
 }
@@ -241,10 +225,6 @@ h3 {
   font-weight: 400;
   font-size: 0.85em;
 }
-.is-intro .home-title {
-  opacity: 0;
-  filter: blur(10px);
-}
 .opening-name {
   position: absolute;
   top: 28.8%;
@@ -254,9 +234,6 @@ h3 {
   letter-spacing: -0.075em;
   opacity: 0;
   pointer-events: none;
-}
-.is-intro .opening-name {
-  animation: opening-name 1.8s both;
 }
 .scroll-prompt {
   position: absolute;
@@ -1096,37 +1073,6 @@ h3 {
     transform: translate(3%, -2%);
   }
 }
-@keyframes grain-intro {
-  0%,
-  30% {
-    opacity: 0.85;
-    mix-blend-mode: screen;
-  }
-  100% {
-    opacity: 0.08;
-    mix-blend-mode: soft-light;
-  }
-}
-@keyframes scene-reveal {
-  0%,
-  30% {
-    filter: grayscale(1) contrast(3) brightness(0.7);
-  }
-  100% {
-    filter: none;
-  }
-}
-@keyframes opening-name {
-  0%,
-  70% {
-    opacity: 1;
-    filter: blur(0);
-  }
-  100% {
-    opacity: 0;
-    filter: blur(12px);
-  }
-}
 @keyframes recording-pulse {
   from {
     opacity: 1;
@@ -1545,5 +1491,327 @@ h3 {
   .page-enter {
     filter: none;
     opacity: 1;
+  }
+}
+
+/* Particle rendering and the liquid type transitions share the recorded timing. */
+.intro-effects {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.photo-effects {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  pointer-events: none;
+}
+.is-intro .home-title {
+  opacity: 1;
+  filter: none;
+}
+.is-intro .home-title > span {
+  opacity: 0;
+}
+.is-intro .opening-name {
+  opacity: 1;
+  animation: none;
+}
+.is-intro .site-header,
+.is-intro .award-ribbon {
+  opacity: 0;
+}
+.intro-playing .site-header,
+.intro-playing .award-ribbon {
+  animation: interface-reveal 3s both;
+}
+.intro-playing .opening-name {
+  transform-origin: left center;
+  animation: name-liquid 3s both;
+}
+.intro-playing .home-title > span {
+  filter: url(#intro-liquid);
+  transform-origin: center;
+  animation: word-liquid 3s both;
+}
+.intro-playing .home-title > span:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.intro-playing .home-title > span:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.intro-playing .home-title > span:nth-child(4) {
+  animation-delay: 0.22s;
+}
+.camera-transition {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 35;
+  object-fit: cover;
+  pointer-events: none;
+  visibility: hidden;
+}
+.camera-transition.is-active {
+  visibility: visible;
+  animation: camera-out 1.45s both;
+}
+.camera-waiting .camera-transition,
+.camera-waiting .from-scene .about-color,
+.camera-waiting .from-scene .about-portrait,
+.camera-waiting .from-scene .about-dots,
+.camera-waiting .from-scene .about-scroll {
+  animation-play-state: paused;
+}
+.about-page {
+  --portrait-split: 59.4%;
+}
+.about-color {
+  clip-path: inset(0 var(--portrait-split) 0 0);
+}
+.from-scene .about-color {
+  animation: portrait-split 1.25s 1.2s both;
+}
+.from-scene .about-portrait {
+  animation: portrait-slide 1.25s 1.2s both;
+}
+.from-scene .about-dots {
+  animation: portrait-points 1.2s 1.25s both;
+}
+.from-scene .about-scroll {
+  animation: about-copy 1.2s 1.55s both;
+}
+.about-scroll.is-flowing h1,
+.about-scroll.is-flowing h2,
+.about-scroll.is-flowing p:not(.about-values-label) {
+  filter: url(#scroll-liquid);
+}
+.text-resolving {
+  transform-origin: left center;
+  animation: text-resolve 1s both;
+}
+.contact-face-transition {
+  position: absolute;
+  top: -48px;
+  left: -60px;
+  width: 100%;
+  height: 490px;
+  z-index: 2;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    ellipse 36% 76% at 50% 42%,
+    #000 61%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 36% 76% at 50% 42%,
+    #000 61%,
+    transparent 78%
+  );
+  animation: contact-face-fold 1.3s both;
+}
+.contacts-page .contact-eyes > img {
+  animation: eyes-settle 1.3s both;
+}
+.contacts-page .contact-meta,
+.contacts-page .contact-socials {
+  animation: contact-content 1s 0.55s both;
+}
+.contacts-page .reference-form,
+.contacts-page .contacts-footer {
+  animation: contact-content 1s 0.8s both;
+}
+@keyframes name-liquid {
+  0%,
+  32% {
+    opacity: 1;
+    transform: scaleY(1);
+    filter: none;
+  }
+  44% {
+    opacity: 1;
+    transform: scaleY(0.11);
+    filter: url(#intro-liquid);
+  }
+  56%,
+  100% {
+    opacity: 0;
+    transform: scaleY(0.015);
+    filter: url(#intro-liquid);
+  }
+}
+@keyframes interface-reveal {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes word-liquid {
+  0%,
+  40% {
+    opacity: 0;
+    transform: scaleY(0.015);
+  }
+  45% {
+    opacity: 1;
+    transform: scaleY(0.045);
+  }
+  61% {
+    opacity: 1;
+    transform: scaleY(0.7);
+  }
+  86%,
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+@keyframes camera-out {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes portrait-split {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 var(--portrait-split) 0 0);
+  }
+}
+@keyframes portrait-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-9.4vw);
+  }
+}
+@keyframes portrait-points {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes about-copy {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  35% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes text-resolve {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.07);
+  }
+  24% {
+    opacity: 1;
+    transform: scaleY(0.13);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+@keyframes contact-face-fold {
+  0%,
+  22% {
+    clip-path: inset(0 15% 0 15%);
+    transform: translate(0, 0);
+  }
+  100% {
+    clip-path: inset(0 0 54% 0);
+    transform: translate(60px, 48px);
+  }
+}
+@keyframes eyes-settle {
+  0%,
+  67% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes contact-content {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+@media (max-width: 760px) {
+  .about-page {
+    --portrait-split: 52%;
+  }
+  .contact-face-transition {
+    height: 300px;
+    top: -35px;
+    left: -20px;
+  }
+  @keyframes contact-face-fold {
+    0%,
+    22% {
+      clip-path: inset(0 15% 0 15%);
+      transform: translate(0, 0);
+    }
+    100% {
+      clip-path: inset(0 0 54% 0);
+      transform: translate(20px, 35px);
+    }
+  }
+}
+@media (max-width: 480px) {
+  .about-page {
+    --portrait-split: 54%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-effects,
+  .photo-effects,
+  .camera-transition,
+  .contact-face-transition {
+    display: none;
+  }
+  .home-title > span,
+  .contact-eyes > img,
+  .contact-meta,
+  .contact-socials,
+  .reference-form,
+  .contacts-footer {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .about-scroll.is-flowing h1,
+  .about-scroll.is-flowing h2,
+  .about-scroll.is-flowing p {
+    filter: none;
   }
 }

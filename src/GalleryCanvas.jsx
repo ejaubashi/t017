@@ -3,18 +3,23 @@ import * as THREE from "three";
 
 const vertexShader = `
   varying vec2 vUv;
+  varying float vEdge;
   uniform float uBend;
+  uniform float uSpeed;
   void main() {
     vUv = uv;
     vec4 world = modelMatrix * vec4(position, 1.0);
     float edge = pow(max(0.0, abs(world.x) - 7.2) / 2.0, 2.0);
-    world.y *= 1.0 + edge * uBend;
+    vEdge = abs(world.x) / 8.0;
+    world.y *= 1.0 + edge * (uBend + uSpeed * 0.18);
     world.z += edge * 0.55;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
 `;
 const fragmentShader = `
   varying vec2 vUv;
+  varying float vEdge;
+  uniform float uSpeed;
   uniform sampler2D uTexture;
   uniform vec2 uImageSize;
   uniform vec2 uPlaneSize;
@@ -23,7 +28,9 @@ const fragmentShader = `
     float planeAspect = uPlaneSize.x / uPlaneSize.y;
     vec2 ratio = vec2(min(planeAspect / imageAspect, 1.0), min(imageAspect / planeAspect, 1.0));
     vec2 uv = vUv * ratio + (1.0 - ratio) * 0.5;
-    gl_FragColor = texture2D(uTexture, uv);
+    float fringe = pow(min(vEdge, 1.5), 3.0) * 0.004 * (1.0 + uSpeed);
+    vec4 center = texture2D(uTexture, uv);
+    gl_FragColor = vec4(texture2D(uTexture, uv + vec2(fringe, 0.0)).r, center.g, texture2D(uTexture, uv - vec2(fringe, 0.0)).b, center.a);
     #include <colorspace_fragment>
   }
 `;
@@ -73,6 +80,7 @@ export default function GalleryCanvas({
         uImageSize: { value: new THREE.Vector2(1600, 1000) },
         uPlaneSize: { value: new THREE.Vector2(5.2, 3.2) },
         uBend: { value: 0.65 },
+        uSpeed: { value: 0 },
       };
       const material = new THREE.ShaderMaterial({
         uniforms,
@@ -115,6 +123,9 @@ export default function GalleryCanvas({
     let dragStart = null;
     let lastX;
     let moved = false;
+    let dragVelocity = 0;
+    let lastMoveTime = 0;
+    let lastFrameTime = 0;
     const resize = () => {
       width = mount.clientWidth;
       height = mount.clientHeight;
@@ -156,12 +167,19 @@ export default function GalleryCanvas({
       dragStart = event.clientX;
       lastX = event.clientX;
       moved = false;
+      dragVelocity = 0;
+      lastMoveTime = performance.now();
       mount.setPointerCapture(event.pointerId);
       mount.classList.add("is-dragging");
     };
     const pointerMove = (event) => {
       if (dragStart === null) return;
       if (Math.abs(event.clientX - dragStart) > 6) moved = true;
+      const now = performance.now();
+      dragVelocity =
+        dragVelocity * 0.45 +
+        ((lastX - event.clientX) / Math.max(8, now - lastMoveTime)) * 0.55;
+      lastMoveTime = now;
       callbacks.current.onMove(
         (lastX - event.clientX) / Math.max(width * 0.32, 180),
       );
@@ -173,6 +191,14 @@ export default function GalleryCanvas({
       if (!moved) {
         const selected = projectAt(event.clientX, event.clientY);
         if (selected) callbacks.current.onSelect(selected);
+      } else if (!reducedMotion && performance.now() - lastMoveTime < 100) {
+        callbacks.current.onMove(
+          THREE.MathUtils.clamp(
+            (dragVelocity * 220) / Math.max(width * 0.32, 180),
+            -2.2,
+            2.2,
+          ),
+        );
       }
       dragStart = null;
     };
@@ -180,13 +206,17 @@ export default function GalleryCanvas({
       dragStart = null;
       mount.classList.remove("is-dragging");
     };
-    const render = () => {
+    const render = (now) => {
+      const elapsed = lastFrameTime ? Math.min(40, now - lastFrameTime) : 16.67;
+      lastFrameTime = now;
       const speed = Math.abs(positionRef.current - current);
       const distance = baseDistance * (1 + Math.min(speed, 0.8) * 0.5);
       camera.position.z +=
         ((reducedMotion ? baseDistance : distance) - camera.position.z) *
-        (reducedMotion ? 1 : 0.06);
-      current += (positionRef.current - current) * (reducedMotion ? 1 : 0.075);
+        (reducedMotion ? 1 : 1 - Math.pow(0.94, elapsed / 16.67));
+      current +=
+        (positionRef.current - current) *
+        (reducedMotion ? 1 : 1 - Math.pow(0.925, elapsed / 16.67));
       const circumference = spacing * meshes.length;
       meshes.forEach((mesh, index) => {
         let x = index * spacing - current * spacing;
@@ -195,6 +225,9 @@ export default function GalleryCanvas({
             circumference) -
           circumference / 2;
         mesh.position.x = x;
+        mesh.material.uniforms.uSpeed.value = reducedMotion
+          ? 0
+          : Math.min(1.4, speed);
       });
       renderer.render(scene, camera);
       frame = requestAnimationFrame(render);

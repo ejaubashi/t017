@@ -31,3 +31,5 @@ Media under `public/reference` was recovered from the user-provided screen recor
 The contact form supports local voice and video recording. Visitors can download a recording and attach it to their email draft. Recordings are kept in browser memory until removed or the page closes. Social profile links can be set in `src/projects.js`.
 
 Motion respects the visitor’s reduced-motion preference. Gallery controls, filters, navigation, and dialogs support keyboard use.
+
+The particle introduction and pointer trails sample the displayed photographs through WebGL. Trails age from solid paint into stippled image detail and clear after movement stops. SVG filters recreate the liquid text reveals and scroll distortion. The About camera transition uses a short clip recovered from the supplied recording, followed by the portrait split. The gallery adds drag inertia, speed-dependent bending, and chromatic fringes. Browsers without WebGL use the project grid.

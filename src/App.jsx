@@ -21,7 +21,7 @@ import {
   Square,
   X,
 } from "lucide-react";
-import BrushTrail from "./BrushTrail";
+import PhotoEffects from "./PhotoEffects";
 import { assets, projects, socials } from "./projects";
 
 const GalleryCanvas = lazy(() => import("./GalleryCanvas"));
@@ -227,9 +227,73 @@ function Portfolio({ onOpen, reducedMotion }) {
   );
 }
 
-function About({ onContact }) {
+function About({ onContact, fromScene, reducedMotion }) {
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    if (reducedMotion) return;
+    const scroller = scrollRef.current;
+    const displacement = document.getElementById("scroll-displacement");
+    const blur = document.getElementById("scroll-blur");
+    let frame = 0;
+    let previousScroll = scroller.scrollTop;
+    let previousTime = performance.now();
+    let amount = 0;
+    let target = 0;
+    const update = () => {
+      frame = 0;
+      target *= 0.86;
+      amount += (target - amount) * 0.23;
+      displacement.setAttribute("scale", String(amount * 72));
+      blur.setAttribute("stdDeviation", `${amount * 6.5} ${amount * 0.55}`);
+      scroller.classList.toggle("is-flowing", amount > 0.015);
+      if (target > 0.005 || amount > 0.005)
+        frame = requestAnimationFrame(update);
+    };
+    const disturb = (strength) => {
+      target = Math.max(target, strength);
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const scroll = () => {
+      const now = performance.now();
+      const speed =
+        Math.abs(scroller.scrollTop - previousScroll) /
+        Math.max(12, now - previousTime);
+      previousTime = now;
+      previousScroll = scroller.scrollTop;
+      disturb(Math.min(1, speed / 3));
+    };
+    const entrance = setTimeout(() => disturb(0.9), fromScene ? 1550 : 40);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("text-resolving");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { root: scroller, rootMargin: "0px 0px -8% 0px", threshold: 0.1 },
+    );
+    scroller
+      .querySelectorAll(
+        ".about-body h2, .about-principle > p:not(.about-values-label)",
+      )
+      .forEach((element) => observer.observe(element));
+    scroller.addEventListener("scroll", scroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(entrance);
+      observer.disconnect();
+      scroller.removeEventListener("scroll", scroll);
+      displacement.setAttribute("scale", "0");
+      blur.setAttribute("stdDeviation", "0");
+    };
+  }, [fromScene, reducedMotion]);
   return (
-    <section className="about-page page-enter" aria-labelledby="about-title">
+    <section
+      className={`about-page ${fromScene ? "from-scene" : "page-enter"}`}
+      aria-labelledby="about-title"
+    >
       <div className="about-paper" />
       <div className="about-color">
         <img className="about-portrait" src={assets.portrait} alt="Portrait" />
@@ -240,7 +304,7 @@ function About({ onContact }) {
         alt=""
         aria-hidden="true"
       />
-      <div className="about-scroll">
+      <div className="about-scroll" ref={scrollRef}>
         <div className="about-opening">
           <h1 id="about-title">
             Making the
@@ -331,7 +395,7 @@ function About({ onContact }) {
   );
 }
 
-function Contact({ onPrivacy }) {
+function Contact({ onPrivacy, reducedMotion }) {
   const [time, setTime] = useState("");
   const [recording, setRecording] = useState(null);
   const [requestingMedia, setRequestingMedia] = useState(false);
@@ -480,7 +544,7 @@ function Contact({ onPrivacy }) {
     }
   };
   return (
-    <section className="contacts-page page-enter" aria-label="Contacts">
+    <section className="contacts-page" aria-label="Contacts">
       <div className="contacts-content">
         <div className="contact-meta">
           <span>Available worldwide</span>
@@ -491,6 +555,18 @@ function Contact({ onPrivacy }) {
         </div>
         <CrossFrame className="contact-eyes">
           <img src={assets.eyes} alt="A stippled portrait detail" />
+          {!reducedMotion && (
+            <div className="contact-face-transition" aria-hidden="true">
+              <PhotoEffects
+                source={assets.portrait}
+                paper
+                intro
+                duration={1300}
+                shift={0}
+                zoom={2}
+              />
+            </div>
+          )}
         </CrossFrame>
         <div className="contact-socials">
           {socials.map((social) =>
@@ -719,9 +795,14 @@ function Privacy({ onClose }) {
 
 export default function App() {
   const [page, setPage] = useState(pageFromHash);
-  const [intro, setIntro] = useState(
-    !sessionStorage.getItem("endy-intro-seen"),
-  );
+  const [intro, setIntro] = useState(pageFromHash() === "home");
+  const [introReady, setIntroReady] = useState(false);
+  const [cameraTransition, setCameraTransition] = useState(false);
+  const [cameraPlaying, setCameraPlaying] = useState(false);
+  const [aboutEntrance, setAboutEntrance] = useState(false);
+  const cameraRef = useRef(null);
+  const introAnimationRef = useRef(null);
+  const previousPage = useRef(page);
   const [project, setProject] = useState(null);
   const [privacy, setPrivacy] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
@@ -729,27 +810,61 @@ export default function App() {
   );
   useEffect(() => {
     const route = () => {
-      setPage(pageFromHash());
+      const destination = pageFromHash();
+      const fromScene =
+        destination === "about" &&
+        ["home", "portfolio"].includes(previousPage.current) &&
+        !reducedMotion;
+      setCameraTransition(fromScene);
+      setAboutEntrance(fromScene);
+      previousPage.current = destination;
+      setPage(destination);
       setProject(null);
       setPrivacy(false);
+      setIntro(false);
     };
     addEventListener("hashchange", route);
     const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const updateMotion = () => setReducedMotion(media.matches);
+    const updateMotion = () => {
+      setReducedMotion(media.matches);
+      if (media.matches) {
+        setCameraTransition(false);
+        setAboutEntrance(false);
+      }
+    };
     media.addEventListener("change", updateMotion);
-    const timer = setTimeout(
-      () => {
-        setIntro(false);
-        sessionStorage.setItem("endy-intro-seen", "1");
-      },
-      reducedMotion ? 0 : 1800,
-    );
     return () => {
       removeEventListener("hashchange", route);
       media.removeEventListener("change", updateMotion);
-      clearTimeout(timer);
     };
   }, [reducedMotion]);
+  const readyForIntro = useCallback(() => setIntroReady(true), []);
+  useEffect(() => {
+    if (!intro || (!introReady && !reducedMotion)) return;
+    introAnimationRef.current?.beginElement();
+    const timer = setTimeout(
+      () => {
+        setIntro(false);
+      },
+      reducedMotion ? 0 : 3000,
+    );
+    return () => clearTimeout(timer);
+  }, [intro, introReady, reducedMotion]);
+  useEffect(() => {
+    const video = cameraRef.current;
+    setCameraPlaying(false);
+    if (!cameraTransition) {
+      video.pause();
+      return;
+    }
+    video.currentTime = 0;
+    video.play().catch(() => setCameraTransition(false));
+    const timeout = setTimeout(() => setCameraTransition(false), 4000);
+    return () => {
+      clearTimeout(timeout);
+      video.pause();
+    };
+  }, [cameraTransition]);
   const navigate = useCallback((destination) => {
     location.hash = destination === "home" ? "/" : `/${destination}`;
   }, []);
@@ -767,7 +882,7 @@ export default function App() {
   const paper = page === "about" || page === "contacts";
   return (
     <div
-      className={`portfolio-app page-${page} ${intro ? "is-intro" : ""} ${paper ? "is-paper" : ""}`}
+      className={`portfolio-app page-${page} ${intro ? "is-intro" : ""} ${intro && introReady ? "intro-playing" : ""} ${cameraTransition && !cameraPlaying ? "camera-waiting" : ""} ${paper ? "is-paper" : ""}`}
     >
       <svg
         width="0"
@@ -776,6 +891,86 @@ export default function App() {
         aria-hidden="true"
       >
         <defs>
+          <filter
+            id="intro-liquid"
+            x="-30%"
+            y="-80%"
+            width="160%"
+            height="260%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.012 0.035"
+              numOctaves="2"
+              seed="8"
+              result="liquid-noise"
+            />
+            <feGaussianBlur
+              in="SourceGraphic"
+              stdDeviation="3.8"
+              result="soft-type"
+            />
+            <feColorMatrix
+              in="soft-type"
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+              result="thick-type"
+            />
+            <feDisplacementMap
+              in="thick-type"
+              in2="liquid-noise"
+              scale="0"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            >
+              {intro && introReady && !reducedMotion && (
+                <animate
+                  ref={introAnimationRef}
+                  attributeName="scale"
+                  values="0;0;90;45;0"
+                  keyTimes="0;.30;.49;.73;1"
+                  dur="3s"
+                  begin="indefinite"
+                  fill="freeze"
+                />
+              )}
+            </feDisplacementMap>
+          </filter>
+          <filter
+            id="scroll-liquid"
+            x="-20%"
+            y="-60%"
+            width="140%"
+            height="220%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.007 0.05"
+              numOctaves="2"
+              seed="5"
+              result="scroll-noise"
+            />
+            <feDisplacementMap
+              id="scroll-displacement"
+              in="SourceGraphic"
+              in2="scroll-noise"
+              scale="0"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+            <feGaussianBlur
+              id="scroll-blur"
+              stdDeviation="0"
+              result="scroll-soft"
+            />
+            <feColorMatrix
+              in="scroll-soft"
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+            />
+          </filter>
           <filter id="stipple-alpha" colorInterpolationFilters="sRGB">
             <feColorMatrix
               type="matrix"
@@ -798,6 +993,9 @@ export default function App() {
         className={`scene-background ${page === "portfolio" ? "is-blurred" : ""}`}
       >
         <img src={assets.scene} alt="" fetchPriority="high" />
+        {intro && (
+          <PhotoEffects source={assets.scene} intro onReady={readyForIntro} />
+        )}
       </div>
       <header className="site-header">
         <a href="#/" className="site-name" aria-label="Endy J home">
@@ -840,10 +1038,42 @@ export default function App() {
         {page === "portfolio" && (
           <Portfolio onOpen={setProject} reducedMotion={reducedMotion} />
         )}
-        {page === "about" && <About onContact={() => navigate("contacts")} />}
-        {page === "contacts" && <Contact onPrivacy={() => setPrivacy(true)} />}
+        {page === "about" && (
+          <About
+            onContact={() => navigate("contacts")}
+            fromScene={aboutEntrance}
+            reducedMotion={reducedMotion}
+          />
+        )}
+        {page === "contacts" && (
+          <Contact
+            onPrivacy={() => setPrivacy(true)}
+            reducedMotion={reducedMotion}
+          />
+        )}
       </main>
-      <BrushTrail disabled={Boolean(project || privacy)} paper={paper} />
+      <video
+        ref={cameraRef}
+        className={`camera-transition ${cameraTransition ? "is-active" : ""}`}
+        src={`${import.meta.env.BASE_URL}reference/about-camera.mp4`}
+        poster={assets.scene}
+        preload="auto"
+        muted
+        playsInline
+        aria-hidden="true"
+        onPlaying={() => setCameraPlaying(true)}
+        onEnded={() => setCameraTransition(false)}
+        onError={() => setCameraTransition(false)}
+      />
+      <PhotoEffects
+        source={paper ? assets.portrait : assets.scene}
+        disabled={
+          intro ||
+          Boolean(project || privacy) ||
+          !["home", "about"].includes(page)
+        }
+        paper={paper}
+      />
       <aside className="award-ribbon" aria-label="Reference design nominee">
         <strong>W.</strong>
         <span>Nominee</span>
